@@ -50,8 +50,9 @@ parser.add_argument('-c_model', type=str, default=None, help="Use fisheye model 
 parser.add_argument('-session', type=str, default=None, help="Folder to a session on which calibration is performed.")
 args = parser.parse_args()
 
+data_path = str(pathlib.Path(__file__).resolve().parent) + "/dataset"
 if args.session is not None:
-    copy_session_folder(args.session, str(pathlib.Path(__file__).resolve().parent) + "/dataset")
+    copy_session_folder(args.session, data_path)
 device = args.device
 if args.save_folder is None:
     print(pathlib.Path(__file__).resolve().parent)
@@ -60,7 +61,7 @@ else:
     save_folder = args.save_folder
 os.makedirs(save_folder+ "/jsons/", exist_ok=True)
 os.makedirs(save_folder+ "/images/", exist_ok=True)
-static = ['-s', '5.0', '-nx', '29', '-ny', '29', '-ms', '3.7', '-dbg',  '-m', 'process', '-brd', "OAK-D-PRO" + ".json", "-scp", save_folder + "/jsons/"]
+static = ['-s', '5.0', '-nx', '29', '-ny', '29', '-ms', '3.7', '-dbg',  '-m', 'process', '-brd', args.device + ".json", "-scp", save_folder + "/jsons/"]
 if args.c_model is not None:
     static += ["-cm", "fisheye"]
 
@@ -96,7 +97,7 @@ def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, ti
 
     left_socket = dai.CameraBoardSocket.LEFT
     right_socket = dai.CameraBoardSocket.RIGHT
-    if main.board_config['cameras'][left_id]["type"] == 'mono':
+    if main.board_config['cameras'][left_id.name]["type"] == 'mono':
         monoLeft = pipeline.create(dai.node.MonoCamera)
         monoRight = pipeline.create(dai.node.MonoCamera)
         monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
@@ -106,8 +107,7 @@ def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, ti
         monoRight = pipeline.create(dai.node.ColorCamera)
         monoLeft.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
         monoRight.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
-    print(cv2.imread(left_array[0]).shape[0] )
-    if cv2.imread(left_array[0]).shape[0] > 1280:
+    if False:
         monoLeft.setIspScale(2, 3)
         monoRight.setIspScale(2, 3)
     monoLeft.setBoardSocket(left_socket)
@@ -250,15 +250,19 @@ def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, ti
     plt.close(fig)
     return mu, std, num_filtered_points
 
-def generate_binary_strings(n):
+def generate_binary_strings(n, model = "perspective"):
     binary_strings = []
-    base_string = "000000001"
-
+    if model == "perspective":
+        base_string = "000000001"
+        size = 9
+    else:
+        base_string = "0001"
+        size = 4
     for i in range(n):
-        binary_value = bin(i)[2:].zfill(9)
+        binary_value = bin(i)[2:].zfill(size)
         binary_string = list(base_string)
 
-        for j in range(9):
+        for j in range(size):
             if binary_value[j] == '1':
                 binary_string[j] = '1'
         if "".join(binary_string) not in binary_strings and "".join(binary_string) not in ["111111000", "111111100", "111111110", "111111111", "111111010", "111111001"]:
@@ -272,14 +276,14 @@ if not args.full:
         if device in results.keys():
             calibration_models_dict = results[device]["binaries"]
         else:
-            calibration_models = generate_binary_strings(n*2)
+            calibration_models = generate_binary_strings(n*2, args.c_model)
             calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
     else:
         print("Config file does not exsists, defaulting back to the normal.")
-        calibration_models = generate_binary_strings(n*2)
+        calibration_models = generate_binary_strings(n*2, args.c_model)
         calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
 else:
-    calibration_models = generate_binary_strings(n*2)
+    calibration_models = generate_binary_strings(n*2, args.c_model)
     calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
 
 mean = {}
@@ -340,9 +344,9 @@ for k in range(len(calibration_models_dict["left"])):
                 right_array.append(file.replace("left", "right"))
                 left_array.append(file)
     else:
-        left_array.append("D:/FAKS, FMF/Studentska dela/Luxonis/depthai/dataset/left.png")
-        right_array.append("D:/FAKS, FMF/Studentska dela/Luxonis/depthai/dataset/right.png")
-    if not args.disable_depth:
+        left_array.append(data_path +"/left.png")
+        right_array.append(data_path + "/right.png")
+    if args.disable_depth:
         mu, sigma, fillrate = depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, binary, folder = save_folder, display = display_graphs)
         with open(save_folder + "/" + f"calib_search_{n}.csv", 'a') as file:
             file.write(f"{binary},stereo,{0},{0},{0},{0},{0},{mu},{sigma},{fillrate}\n")
