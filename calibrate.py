@@ -54,6 +54,12 @@ camToRgbRes = {
                 'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
                 }
 
+camToSize = {
+    'IMX586': (4000, 3000),
+    'OV9282': (1280, 800),
+    'AR0234': (1920, 1200),
+}
+
 antibandingOpts = {
     'off': dai.CameraControl.AntiBandingMode.OFF,
     '50':  dai.CameraControl.AntiBandingMode.MAINS_50_HZ,
@@ -353,8 +359,15 @@ class Main:
         self.args = parse_args()
         self.traceLevel= self.args.traceLevel
         self.output_scale_factor = self.args.outputScaleFactor
-        self.aruco_dictionary = cv2.aruco.Dictionary_get(
-            cv2.aruco.DICT_4X4_1000)
+
+#dictionary = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_250)
+#parameters =  cv.aruco.DetectorParameters()
+#detector = cv.aruco.ArucoDetector(dictionary, parameters)
+
+
+
+        #self.aruco_dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_1000)
+        self.aruco_dictionary = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_1000)
         self.enablePolygonsDisplay = self.args.enablePolygonsDisplay
         self.board_name = None
         if not self.args.debugProcessingMode:
@@ -462,14 +475,9 @@ class Main:
             self.mouseTrigger = True
 
     def startPipeline(self):
-        pipeline = self.create_pipeline()
-        self.device.startPipeline(pipeline)
-
-        self.camera_queue = {}
-        for config_cam in self.board_config['cameras']:
-            cam = self.board_config['cameras'][config_cam]
-            if cam["name"] not in self.args.disableCamera:
-                self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
+        self.create_pipeline()
+        self.pipeline.start()
+        #self.device.startPipeline(pipeline)
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
@@ -529,57 +537,19 @@ class Main:
         return True
     
     def create_pipeline(self):
-        pipeline = dai.Pipeline()
+        self.pipeline = dai.Pipeline(self.device)
 
         fps = self.args.framerate
+        self.camera_queue = {}
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
             if cam_info["name"] not in self.args.disableCamera:
-                if cam_info['type'] == 'mono':
-                    cam_node = pipeline.createMonoCamera()
-                    xout = pipeline.createXLinkOut()
-                    sensorName = cam_info['sensorName']
-                    print(f'Sensor name for {cam_info["name"]} is {sensorName}')
-                    cam_node.setBoardSocket(stringToCam[cam_id])
-                    cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
-                    cam_node.setFps(fps)
-
-                    xout.setStreamName(cam_info['name'])
-                    cam_node.out.link(xout.input)
-                else:
-                    cam_node = pipeline.createColorCamera()
-                    xout = pipeline.createXLinkOut()
-
-                    cam_node.setBoardSocket(stringToCam[cam_id])
-                    sensorName = cam_info['sensorName']
-                    print(f'Sensor name for {cam_info["name"]} is {sensorName}')
-                    cam_node.setResolution(camToRgbRes[cam_info['sensorName'].upper()])
-                    cam_node.setFps(fps)
-
-                    xout.setStreamName(cam_info['name'])
-                    cam_node.isp.link(xout.input)
-                    if cam_info['sensorName'] == "OV9*82":
-                        cam_node.initialControl.setSharpness(0)
-                        cam_node.initialControl.setLumaDenoise(0)
-                        cam_node.initialControl.setChromaDenoise(4)
-
-                    if cam_info['hasAutofocus']:
-                        if self.args.rgbLensPosition:
-                            cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
-                        else:
-                            cam_node.initialControl.setManualFocus(135)
-
-                        controlIn = pipeline.createXLinkIn()
-                        controlIn.setStreamName(cam_info['name'] + '-control')
-                        controlIn.out.link(cam_node.inputControl)
-
-                cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
-                xout.input.setBlocking(False)
-                xout.input.setQueueSize(1)
-
-        return pipeline
-
-
+                cam_node = self.pipeline.createCamera()
+                cam_node.setBoardSocket(stringToCam[cam_id])
+                sensorName = cam_info['sensorName']
+                self.camera_queue[cam_info['name']] = cam_node.requestOutput(camToSize[sensorName]).createOutputQueue()
+                print(f'Sensor name for {cam_info["name"]} is {sensorName}')
+                
     def parse_frame(self, frame, stream_name):
         if not self.is_markers_found(frame):
             return False
@@ -718,16 +688,18 @@ class Main:
         while not finished:
             currImageList = {}
             for key in self.camera_queue.keys():
+                print("Getting key: " + key)
                 frameMsg = self.camera_queue[key].get()
 
                 #print(f'Timestamp of  {key} is {frameMsg.getTimestamp()}')
 
                 syncCollector.add_msg(key, frameMsg)
-                color_frame = None
-                if frameMsg.getType() in [dai.RawImgFrame.Type.RAW8, dai.RawImgFrame.Type.GRAY8] :
-                    color_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_GRAY2BGR)
-                else:
-                    color_frame = frameMsg.getCvFrame()
+                #color_frame = None
+                color_frame = frameMsg.getCvFrame()
+                #if frameMsg.getType() in [dai.RawImgFrame.Type.RAW8, dai.RawImgFrame.Type.GRAY8] :
+                #    color_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_GRAY2BGR)
+                #else:
+                #    color_frame = frameMsg.getCvFrame()
                 currImageList[key] = color_frame
                 # print(gray_frame.shape)
 
