@@ -250,9 +250,9 @@ def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, ti
     plt.close(fig)
     return mu, std, num_filtered_points
 
-def generate_binary_strings(n, model = "perspective"):
+def generate_binary_strings(n, model = None):
     binary_strings = []
-    if model == "perspective":
+    if model is None:
         base_string = "000000001"
         size = 9
     else:
