@@ -18,22 +18,6 @@ import os
 import json
 from utils_plots import *
 
-
-cdict = {'red':  ((0.0, 0.0, 0.0),   # no red at 0
-          (0.5, 1.0, 1.0),   # all channels set to 1.0 at 0.5 to create white
-          (1.0, 0.8, 0.8)),  # set to 0.8 so its not too bright at 1
-'green': ((0.0, 0.8, 0.8),   # set to 0.8 so its not too bright at 0
-          (0.5, 1.0, 1.0),   # all channels set to 1.0 at 0.5 to create white
-          (1.0, 0.0, 0.0)),  # no green at 1
-'blue':  ((0.0, 0.0, 0.0),   # no blue at 0
-          (0.5, 1.0, 1.0),   # all channels set to 1.0 at 0.5 to create white
-          (1.0, 0.0, 0.0))   # no blue at 1
-}
-
-
-GnRd = colors.LinearSegmentedColormap('GnRd', cdict)
-threshold = {"left": 0.75, "right": 0.75, "tof": 0.65, "rgb": 1.5, "color": 1.5, "vertical": 1.0}
-
 parser = argparse.ArgumentParser()
 parser.add_argument('-folder', type=str, default=None, help="Folder to session on which to run calibration.")
 parser.add_argument('-device', type=str, default=None, help="Name of the device, on which the calibration is run.")
@@ -49,36 +33,6 @@ parser.add_argument('-save_folder', type=str, default=None, help="Folder where a
 parser.add_argument('-c_model', type=str, default=None, help="Use fisheye model instead perspective.")
 parser.add_argument('-session', type=str, default=None, help="Folder to a session on which calibration is performed.")
 args = parser.parse_args()
-
-data_path = str(pathlib.Path(__file__).resolve().parent) + "/dataset"
-if args.session is not None:
-    copy_session_folder(args.session, data_path)
-device = args.device
-if args.save_folder is None:
-    print(pathlib.Path(__file__).resolve().parent)
-    save_folder = str(pathlib.Path(__file__).resolve().parent) + "/" + device
-else:
-    save_folder = args.save_folder
-os.makedirs(save_folder+ "/jsons/", exist_ok=True)
-os.makedirs(save_folder+ "/images/", exist_ok=True)
-static = ['-s', '5.0', '-nx', '29', '-ny', '29', '-ms', '3.7', '-dbg',  '-m', 'process', '-brd', args.device + ".json", "-scp", save_folder + "/jsons/"]
-if args.c_model is not None:
-    static += ["-cm", "fisheye"]
-
-if args.config is None:
-    config_file = str(pathlib.Path(__file__).resolve().parent) + "/calibration_config.json"
-else:
-    config_file = args.config
-
-
-# Generate the first 10 binary strings with the specified format
-n = args.number
-
-with open(save_folder + "/" + f"calib_search_{n}.csv", 'w') as file:
-    file.write("Binary,Camera,Mean,Standard,Reprojection_mean,Gauss_mean,Gauss_standard,Depth_mean[m],Depth_standard[m],Fillrate[%]\n")
-display_graphs = args.graphs
-save = args.save
-depth_on_charucos = False
 
 def rail_steps(steps: int) -> float:
     """
@@ -208,8 +162,8 @@ def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, ti
             index += 1
             frames = {name: queue.get().getCvFrame() for name, queue in queues.items()}
             for name, frame in frames.items():
-                cv2.imshow(name, frame)
-                key = cv2.waitKey(1)
+                #cv2.imshow(name, frame)
+                #key = cv2.waitKey(1)
                 if name == "depth":
                     ax = _ax_h[index-1]
                     ax.set_title(left_array[index-1])
@@ -236,9 +190,9 @@ def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, ti
                         destroy = True
                     elif index == 1 and not depth_on_charucos:
                         destroy = True
-                if key == ord("q"):
-                    destroy = True
-                    break
+                #if key == ord("q"):
+                #    destroy = True
+                #    break
             if destroy:
                 break
         if destroy:
@@ -256,7 +210,7 @@ def generate_binary_strings(n, model = None):
         base_string = "000000001"
         size = 9
     else:
-        base_string = "0001"
+        base_string = "0000"
         size = 4
     for i in range(n):
         binary_value = bin(i)[2:].zfill(size)
@@ -269,182 +223,215 @@ def generate_binary_strings(n, model = None):
             binary_strings.append("".join(binary_string))
     return binary_strings
 
-if not args.full:
+def main(args):
+    data_path = str(pathlib.Path(__file__).resolve().parent) + "/dataset"
+    if args.session is not None:
+        copy_session_folder(args.session, data_path)
+    device = args.device
+    if args.save_folder is None:
+        print(pathlib.Path(__file__).resolve().parent)
+        save_folder = str(pathlib.Path(__file__).resolve().parent) + "/" + device
+    else:
+        save_folder = args.save_folder
+    os.makedirs(save_folder+ "/jsons/", exist_ok=True)
+    os.makedirs(save_folder+ "/images/", exist_ok=True)
+    static = ['-s', '5.0', '-nx', '29', '-ny', '29', '-ms', '3.7', '-dbg',  '-m', 'process', '-brd', args.device + ".json", "-scp", save_folder + "/jsons/"]
+    if args.c_model is not None:
+        static += ["-cm", "fisheye"]
+
+    if args.config is None:
+        config_file = str(pathlib.Path(__file__).resolve().parent) + "/calibration_config.json"
+    else:
+        config_file = args.config
+
+
+    # Generate the first 10 binary strings with the specified format
+    n = args.number
+
+    with open(save_folder + "/" + f"calib_search_{n}.csv", 'w') as file:
+        file.write("Binary,Camera,Mean,Standard,Reprojection_mean,Gauss_mean,Gauss_standard,Depth_mean[m],Depth_standard[m],Fillrate[%]\n")
+    display_graphs = args.graphs
+    save = args.save
+    depth_on_charucos = False
+
+    if not args.full:
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as infile:
+                results = json.load(infile)
+            if device in results.keys():
+                calibration_models_dict = results[device]["binaries"]
+            else:
+                calibration_models = generate_binary_strings(n*2, args.c_model)
+                calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
+        else:
+            print("Config file does not exsists, defaulting back to the normal.")
+            calibration_models = generate_binary_strings(n*2, args.c_model)
+            calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
+    else:
+        calibration_models = generate_binary_strings(n*2, args.c_model)
+        calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
+
+    mean = {}
+    standard = {}
+    params_0 = {}
+    params_2 = {}
+    reprojection_aray = {}
+    depth_mean = []
+    depth_standard = []
+    depth_fill = []
+    calibration_models = []
+    for k in range(len(calibration_models_dict["left"])):
+        static = static + ["-pccm"]
+        current_binaries = {}
+        for key in calibration_models_dict:
+            binary = calibration_models_dict[key][k]
+            static += [key + "=" + binary]
+            current_binaries[key] = binary
+        dynamic = static
+        calibration_models.append(binary)
+        print(f"ON {k}/{len(calibration_models_dict['left'])}")
+        main = Main(dynamic)
+        main.run()
+        calib = dai.CalibrationHandler(main.calib_dest_path)
+        reprojection, mu, std, param = plot_all(main, device, device, calib, save, folder = save_folder, display = display_graphs, binaries = current_binaries)
+        for key in reprojection.keys():
+            shape, loc, scale = param[key]
+            if key not in mean.keys():
+                mean[key] = []
+            mean[key].append(mu[key])
+            if key not in standard.keys():
+                standard[key] = []
+            standard[key].append(std[key])
+            if key not in params_0.keys():
+                params_0[key] = []
+            params_0[key].append(loc)
+            if key not in params_2.keys():
+                params_2[key] = []
+            params_2[key].append(shape)
+            if key not in reprojection_aray.keys():
+                reprojection_aray[key] = []
+            reprojection_aray[key].append(reprojection[key])
+            with open(save_folder + "/" + f"calib_search_{n}.csv", 'a') as file:
+                file.write(f"{current_binaries[key]},{key},{mu[key]},{std[key]},{reprojection[key]},{loc},{shape},{0},{0},{0}\n")
+
+
+        calib = main.calib_dest_path
+        left_array = []
+        right_array = []
+        if depth_on_charucos:
+            filepath = main.dataset_path
+            left_path = filepath + '/' + "left"
+            left_files = glob.glob(left_path + "/*")
+            left_array = []
+            right_array = []
+            for file in left_files:
+                if float(file.split("_")[2]) == 0.0 and float(file.split("_")[3]) == 0.0:
+                    right_array.append(file.replace("left", "right"))
+                    left_array.append(file)
+        else:
+            left_array.append(data_path +"/left.png")
+            right_array.append(data_path + "/right.png")
+        if args.disable_depth:
+            mu, sigma, fillrate = depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, binary, folder = save_folder, display = display_graphs)
+            with open(save_folder + "/" + f"calib_search_{n}.csv", 'a') as file:
+                file.write(f"{binary},stereo,{0},{0},{0},{0},{0},{mu},{sigma},{fillrate}\n")
+        else:
+            mu, sigma, fillrate = 0, 0, 0
+        depth_mean.append(mu)
+        depth_standard.append(sigma)
+        depth_fill.append(fillrate)
+
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(17, 8))
+    fig.subplots_adjust(top=0.922,
+    bottom=0.145,
+    left=0.065,
+    right=0.986,
+    hspace=0.03,
+    wspace=0.2)
+    fig.suptitle("Rectification error")
+
+    color = ["Green", "Red", "Blue", "Yellow"]
+    for index, key in enumerate(reprojection.keys()):
+        x1 = np.linspace(0, len(params_0[key]) + 1, len(params_0[key]))
+        ax1.scatter(x1, mean[key], marker="x", label=f"Mean of Gauss, {key}", color=color[index])
+        ax1.scatter(x1, standard[key], label=f"Standard deviation of Gauss {key}", color=color[index])
+    ax1.legend()
+    ax1.set_ylabel("Reprojection [px]")
+    ax1.grid()
+
+    # Second plot
+    x2 = np.linspace(0, len(depth_fill) + 1, len(depth_fill))
+    ax2.scatter(x2, depth_mean, label="Mean of depth", color="Red")
+    ax2.scatter(x2, depth_fill, marker="x", label="Fill rate", color="Red")
+    ax2.tick_params(axis='y', labelcolor='black', rotation=45)
+    ax2.legend()
+    ax3 = ax2.twinx()
+    ax3.scatter(x2, depth_standard, label="Standard deviation", color="Blue")
+    ax2.set_ylabel("Error [m]/Fillrate [%]")
+    ax3.set_ylabel("Deviation [m]", color='blue')
+    ax2.set_xticks(x2)  # Set x-ticks to the positions of x2
+    ax2.set_xticklabels(calibration_models, rotation=45)
+    ax2.grid()
+
+    plt.tight_layout()
+    plt.show()
+
+    overall_all = {}
+    best_models = {}
+    best_results = {}
+    for index, key in enumerate(reprojection.keys()):
+        reprojection_mean_evaluated = []
+        reprojection_std_evaluated = []
+        overall = []
+        for i in range(len(calibration_models)):
+            depth_mean_evaluated = np.abs(depth_mean[i] - depth_mean[0]) / depth_mean[0]
+            depth_standard_evaluated = (depth_standard[i] - depth_standard[0]) / depth_standard[0]
+            reprojection_mean_evaluated = (mean[key][i]- mean[key][0]) / mean[key][0]
+            reprojection_std_evaluated = (standard[key][i]- standard[key][0]) / standard[key][0]
+            overall.append((reprojection_mean_evaluated + reprojection_std_evaluated)*100)
+
+        paired = list(zip(calibration_models, overall))
+        sorted_pairs = sorted(paired, key=lambda x: x[1])
+        lowest_half = sorted_pairs[:len(sorted_pairs)//2]
+
+        best_models[key] = [x[0] for x in lowest_half]
+        best_results[key] = [x[1] for x in lowest_half]
+        overall_all[key] = overall
+
     if os.path.exists(config_file):
         with open(config_file, 'r') as infile:
             results = json.load(infile)
         if device in results.keys():
-            calibration_models_dict = results[device]["binaries"]
+            results[device]["binaries"] = best_models
+            results[device]["MXID"] = [device]
         else:
-            calibration_models = generate_binary_strings(n*2, args.c_model)
-            calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
-    else:
-        print("Config file does not exsists, defaulting back to the normal.")
-        calibration_models = generate_binary_strings(n*2, args.c_model)
-        calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
-else:
-    calibration_models = generate_binary_strings(n*2, args.c_model)
-    calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
-
-mean = {}
-standard = {}
-params_0 = {}
-params_2 = {}
-reprojection_aray = {}
-depth_mean = []
-depth_standard = []
-depth_fill = []
-calibration_models = []
-for k in range(len(calibration_models_dict["left"])):
-    static = static + ["-pccm"]
-    current_binaries = {}
-    for key in calibration_models_dict:
-        binary = calibration_models_dict[key][k]
-        static += [key + "=" + binary]
-        current_binaries[key] = binary
-    dynamic = static
-    calibration_models.append(binary)
-    print(f"ON {k}/{len(calibration_models_dict['left'])}")
-    main = Main(dynamic)
-    main.run()
-    calib = dai.CalibrationHandler(main.calib_dest_path)
-    reprojection, mu, std, param = plot_all(main, device, device, calib, save, folder = save_folder, display = display_graphs, binaries = current_binaries)
-    for key in reprojection.keys():
-        shape, loc, scale = param[key]
-        if key not in mean.keys():
-            mean[key] = []
-        mean[key].append(mu[key])
-        if key not in standard.keys():
-            standard[key] = []
-        standard[key].append(std[key])
-        if key not in params_0.keys():
-            params_0[key] = []
-        params_0[key].append(loc)
-        if key not in params_2.keys():
-            params_2[key] = []
-        params_2[key].append(shape)
-        if key not in reprojection_aray.keys():
-            reprojection_aray[key] = []
-        reprojection_aray[key].append(reprojection[key])
-        with open(save_folder + "/" + f"calib_search_{n}.csv", 'a') as file:
-            file.write(f"{current_binaries[key]},{key},{mu[key]},{std[key]},{reprojection[key]},{loc},{shape},{0},{0},{0}\n")
-
-
-    calib = main.calib_dest_path
-    left_array = []
-    right_array = []
-    if depth_on_charucos:
-        filepath = main.dataset_path
-        left_path = filepath + '/' + "left"
-        left_files = glob.glob(left_path + "/*")
-        left_array = []
-        right_array = []
-        for file in left_files:
-            if float(file.split("_")[2]) == 0.0 and float(file.split("_")[3]) == 0.0:
-                right_array.append(file.replace("left", "right"))
-                left_array.append(file)
-    else:
-        left_array.append(data_path +"/left.png")
-        right_array.append(data_path + "/right.png")
-    if args.disable_depth:
-        mu, sigma, fillrate = depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, binary, folder = save_folder, display = display_graphs)
-        with open(save_folder + "/" + f"calib_search_{n}.csv", 'a') as file:
-            file.write(f"{binary},stereo,{0},{0},{0},{0},{0},{mu},{sigma},{fillrate}\n")
-    else:
-        mu, sigma, fillrate = 0, 0, 0
-    depth_mean.append(mu)
-    depth_standard.append(sigma)
-    depth_fill.append(fillrate)
-
-
-fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(17, 8))
-fig.subplots_adjust(top=0.922,
-bottom=0.145,
-left=0.065,
-right=0.986,
-hspace=0.03,
-wspace=0.2)
-fig.suptitle("Rectification error")
-
-color = ["Green", "Red", "Blue", "Yellow"]
-for index, key in enumerate(reprojection.keys()):
-    x1 = np.linspace(0, len(params_0[key]) + 1, len(params_0[key]))
-    ax1.scatter(x1, mean[key], marker="x", label=f"Mean of Gauss, {key}", color=color[index])
-    ax1.scatter(x1, standard[key], label=f"Standard deviation of Gauss {key}", color=color[index])
-ax1.legend()
-ax1.set_ylabel("Reprojection [px]")
-ax1.grid()
-
-# Second plot
-x2 = np.linspace(0, len(depth_fill) + 1, len(depth_fill))
-ax2.scatter(x2, depth_mean, label="Mean of depth", color="Red")
-ax2.scatter(x2, depth_fill, marker="x", label="Fill rate", color="Red")
-ax2.tick_params(axis='y', labelcolor='black', rotation=45)
-ax2.legend()
-ax3 = ax2.twinx()
-ax3.scatter(x2, depth_standard, label="Standard deviation", color="Blue")
-ax2.set_ylabel("Error [m]/Fillrate [%]")
-ax3.set_ylabel("Deviation [m]", color='blue')
-ax2.set_xticks(x2)  # Set x-ticks to the positions of x2
-ax2.set_xticklabels(calibration_models, rotation=45)
-ax2.grid()
-
-plt.tight_layout()
-plt.show()
-
-overall_all = {}
-best_models = {}
-best_results = {}
-for index, key in enumerate(reprojection.keys()):
-    reprojection_mean_evaluated = []
-    reprojection_std_evaluated = []
-    overall = []
-    for i in range(len(calibration_models)):
-        depth_mean_evaluated = np.abs(depth_mean[i] - depth_mean[0]) / depth_mean[0]
-        depth_standard_evaluated = (depth_standard[i] - depth_standard[0]) / depth_standard[0]
-        reprojection_mean_evaluated = (mean[key][i]- mean[key][0]) / mean[key][0]
-        reprojection_std_evaluated = (standard[key][i]- standard[key][0]) / standard[key][0]
-        overall.append((reprojection_mean_evaluated + reprojection_std_evaluated)*100)
-
-    paired = list(zip(calibration_models, overall))
-    sorted_pairs = sorted(paired, key=lambda x: x[1])
-    lowest_half = sorted_pairs[:len(sorted_pairs)//2]
-
-    best_models[key] = [x[0] for x in lowest_half]
-    best_results[key] = [x[1] for x in lowest_half]
-    overall_all[key] = overall
-
-if os.path.exists(config_file):
-    with open(config_file, 'r') as infile:
-        results = json.load(infile)
-    if device in results.keys():
-        results[device]["binaries"] = best_models
-        results[device]["MXID"] = [device]
+            results = {}
+            results[device] = {}
+            results[device]["binaries"] = best_models
+            #FIX THIS SO THE MXID is read
+            results[device]["MXID"] = [device]
     else:
         results = {}
         results[device] = {}
         results[device]["binaries"] = best_models
         #FIX THIS SO THE MXID is read
         results[device]["MXID"] = [device]
-else:
-    results = {}
-    results[device] = {}
-    results[device]["binaries"] = best_models
-    #FIX THIS SO THE MXID is read
-    results[device]["MXID"] = [device]
-with open(config_file, 'w') as outfile:
-    json.dump(results, outfile)
+    with open(config_file, 'w') as outfile:
+        json.dump(results, outfile)
 
-print("Done with everything.")
-x2 = np.linspace(0, len(overall) + 1, len(overall))
-fig, (ax) = plt.subplots(1, 1, sharex=True, figsize=(17, 8))
-fig.suptitle(f"Overall improvement of reprojection + depth of {device}")
-for index, key in enumerate(overall_all.keys()):
-    x2 = np.linspace(0, len(overall_all[key]) + 1, len(overall_all[key]))
-    ax.scatter(x2, overall_all[key], label = key)
-ax.legend()
-ax.grid()
-ax.set_xticks(x2)  # Set x-ticks to the positions of x2
-ax.set_xticklabels(calibration_models, rotation=45)
-ax.set_ylabel("Overall improvement[%]")
-plt.show()
+    print("Done with everything.")
+    x2 = np.linspace(0, len(overall) + 1, len(overall))
+    fig, (ax) = plt.subplots(1, 1, sharex=True, figsize=(17, 8))
+    fig.suptitle(f"Overall improvement of reprojection + depth of {device}")
+    for index, key in enumerate(overall_all.keys()):
+        x2 = np.linspace(0, len(overall_all[key]) + 1, len(overall_all[key]))
+        ax.scatter(x2, overall_all[key], label = key)
+    ax.legend()
+    ax.grid()
+    ax.set_xticks(x2)  # Set x-ticks to the positions of x2
+    ax.set_xticklabels(calibration_models, rotation=45)
+    ax.set_ylabel("Overall improvement[%]")
+    plt.show()
+
+main(args)
