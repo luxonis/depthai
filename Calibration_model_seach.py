@@ -86,7 +86,7 @@ def rail_steps(steps: int) -> float:
     """
     return steps / ((400) / (18 * pi))
 
-def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, title, folder = str(pathlib.Path(__file__).resolve().parent), display = False):
+def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, title, folder = str(pathlib.Path(__file__).resolve().parent), display = False, swap = False):
     device = dai.Device()
     pipeline = dai.Pipeline()
 
@@ -110,8 +110,12 @@ def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, ti
     if False:
         monoLeft.setIspScale(2, 3)
         monoRight.setIspScale(2, 3)
-    monoLeft.setBoardSocket(left_socket)
-    monoRight.setBoardSocket(right_socket)
+    if swap:
+        monoLeft.setBoardSocket(right_socket)
+        monoRight.setBoardSocket(left_socket)
+    else:
+        monoLeft.setBoardSocket(left_socket)
+        monoRight.setBoardSocket(right_socket)
     monoLeft.setFps(5)
     monoRight.setFps(5)
 
@@ -172,11 +176,7 @@ def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, ti
 
     rectification = True
     if not rectification:
-        #### Make your own rectification as you wish ###
-        meshLeft = None
-        meshRight = None
-        leftMap = None
-        rightMap = None
+        leftMap, rightMap, meshLeft, meshRight, focalScaleFactor = create_mesh_on_host(calib, left_socket, right_socket, (1280,800), vertical=False)
         stereo.loadMeshData(meshLeft, meshRight)
         stereo.setRectification(False)
 
