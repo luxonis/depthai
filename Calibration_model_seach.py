@@ -387,7 +387,8 @@ def main(args):
         depth_mean.append(mu)
         depth_standard.append(sigma)
         depth_fill.append(fillrate)
-        overall_all, best_models, best_results, overall = save_results(device, config_file, reprojection, calibration_models, depth_mean, depth_standard, mean, standard)
+        if len(reprojection) > 1:
+            overall_all, best_models, best_results, overall = save_results(device, config_file, reprojection, calibration_models, depth_mean, depth_standard, mean, standard)
 
 
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(17, 8))
