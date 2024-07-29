@@ -40,6 +40,53 @@ def rail_steps(steps: int) -> float:
     """
     return steps / ((400) / (18 * pi))
 
+
+def save_results(device, config_file, reprojection, calibration_models, depth_mean, depth_standard, mean, standard):
+    overall_all = {}
+    best_models = {}
+    best_results = {}
+    for index, key in enumerate(reprojection.keys()):
+        reprojection_mean_evaluated = []
+        reprojection_std_evaluated = []
+        overall = []
+        for i in range(len(calibration_models)):
+            depth_mean_evaluated = np.abs(depth_mean[i] - depth_mean[0]) / depth_mean[0]
+            depth_standard_evaluated = (depth_standard[i] - depth_standard[0]) / depth_standard[0]
+            reprojection_mean_evaluated = (mean[key][i]- mean[key][0]) / mean[key][0]
+            reprojection_std_evaluated = (standard[key][i]- standard[key][0]) / standard[key][0]
+            overall.append((reprojection_mean_evaluated + reprojection_std_evaluated)*100)
+
+        paired = list(zip(calibration_models, overall))
+        sorted_pairs = sorted(paired, key=lambda x: x[1])
+        lowest_half = sorted_pairs[:len(sorted_pairs)//2]
+
+        best_models[key] = [x[0] for x in lowest_half]
+        best_results[key] = [x[1] for x in lowest_half]
+        overall_all[key] = overall
+
+    if os.path.exists(config_file):
+        with open(config_file, 'r') as infile:
+            results = json.load(infile)
+        if device in results.keys():
+            results[device]["binaries"] = best_models
+            results[device]["MXID"] = [device]
+        else:
+            results = {}
+            results[device] = {}
+            results[device]["binaries"] = best_models
+            #FIX THIS SO THE MXID is read
+            results[device]["MXID"] = [device]
+    else:
+        results = {}
+        results[device] = {}
+        results[device]["binaries"] = best_models
+        #FIX THIS SO THE MXID is read
+        results[device]["MXID"] = [device]
+    with open(config_file, 'w') as outfile:
+        json.dump(results, outfile)
+    
+    return overall_all, best_models, best_results, overall
+    
 def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, title, folder = str(pathlib.Path(__file__).resolve().parent), display = False, swap = False):
     device = dai.Device()
     pipeline = dai.Pipeline()
@@ -340,6 +387,7 @@ def main(args):
         depth_mean.append(mu)
         depth_standard.append(sigma)
         depth_fill.append(fillrate)
+        overall_all, best_models, best_results, overall = save_results(device, config_file, reprojection, calibration_models, depth_mean, depth_standard, mean, standard)
 
 
     fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(17, 8))
@@ -377,48 +425,6 @@ def main(args):
     plt.tight_layout()
     plt.show()
 
-    overall_all = {}
-    best_models = {}
-    best_results = {}
-    for index, key in enumerate(reprojection.keys()):
-        reprojection_mean_evaluated = []
-        reprojection_std_evaluated = []
-        overall = []
-        for i in range(len(calibration_models)):
-            depth_mean_evaluated = np.abs(depth_mean[i] - depth_mean[0]) / depth_mean[0]
-            depth_standard_evaluated = (depth_standard[i] - depth_standard[0]) / depth_standard[0]
-            reprojection_mean_evaluated = (mean[key][i]- mean[key][0]) / mean[key][0]
-            reprojection_std_evaluated = (standard[key][i]- standard[key][0]) / standard[key][0]
-            overall.append((reprojection_mean_evaluated + reprojection_std_evaluated)*100)
-
-        paired = list(zip(calibration_models, overall))
-        sorted_pairs = sorted(paired, key=lambda x: x[1])
-        lowest_half = sorted_pairs[:len(sorted_pairs)//2]
-
-        best_models[key] = [x[0] for x in lowest_half]
-        best_results[key] = [x[1] for x in lowest_half]
-        overall_all[key] = overall
-
-    if os.path.exists(config_file):
-        with open(config_file, 'r') as infile:
-            results = json.load(infile)
-        if device in results.keys():
-            results[device]["binaries"] = best_models
-            results[device]["MXID"] = [device]
-        else:
-            results = {}
-            results[device] = {}
-            results[device]["binaries"] = best_models
-            #FIX THIS SO THE MXID is read
-            results[device]["MXID"] = [device]
-    else:
-        results = {}
-        results[device] = {}
-        results[device]["binaries"] = best_models
-        #FIX THIS SO THE MXID is read
-        results[device]["MXID"] = [device]
-    with open(config_file, 'w') as outfile:
-        json.dump(results, outfile)
 
     print("Done with everything.")
     x2 = np.linspace(0, len(overall) + 1, len(overall))
