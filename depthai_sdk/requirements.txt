@@ -4,7 +4,7 @@ opencv-contrib-python>4
 blobconverter>=1.4.1
 pytube>=12.1.0
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.22.0
+depthai==2.23.0.0.dev0+31a16b1aecda0a683c81a32843b8a7dc5213ae02
 PyTurboJPEG==1.6.4
 marshmallow==3.17.0
 xmltodict
