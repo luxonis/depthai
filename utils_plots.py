@@ -185,7 +185,9 @@ def copy_session_folder(initial_path, final_path):
         print(f"Successfully copied '{source_capture_path}' to '{destination_capture_path}'")
     except Exception as e:
         raise RuntimeError(f"An error occurred while copying the 'capture' folder: {e}")
-
+    for folder in os.listdir(destination_capture_path):
+        if folder == "color":
+            os.rename(destination_capture_path + "/color", destination_capture_path+ "/rgb")
     # Define the source and destination paths for the depth_test images
     left_source_path = os.path.join(initial_path, 'depth_test',"left;right", 'left')
     right_source_path = os.path.join(initial_path, 'depth_test',"left;right", 'right')

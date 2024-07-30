@@ -1,6 +1,8 @@
 from calibrate import Main
 from depthai_calibration.calibration_utils import distance
 import pathlib
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.colors as colors
@@ -22,7 +24,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-folder', type=str, default=None, help="Folder to session on which to run calibration.")
 parser.add_argument('-device', type=str, default=None, help="Name of the device, on which the calibration is run.")
 parser.add_argument('-config', type=str, default=None, help="Define config file.")
-parser.add_argument('-number', type=int, default=512, help="Number of run combinations.")
+parser.add_argument('-number', type=int, default=128, help="Number of run combinations.")
 parser.add_argument('-gt', type=float, default=1.7, help="Define groung truth for the depth test in m.")
 parser.add_argument('-min_max', type=float, default=0.15, help="Define the distribution plot of ground truth.")
 parser.add_argument("-full", help="Run the full 512 models", default=False, action="store_true")
@@ -32,6 +34,7 @@ parser.add_argument("-disable_depth", help="Disable the depth test from device",
 parser.add_argument('-save_folder', type=str, default=None, help="Folder where all will be saved.")
 parser.add_argument('-c_model', type=str, default=None, help="Use fisheye model instead perspective.")
 parser.add_argument('-session', type=str, default=None, help="Folder to a session on which calibration is performed.")
+parser.add_argument('-iterative', type=str, default=None, help="Folder to the all session datasets.")
 args = parser.parse_args()
 
 def rail_steps(steps: int) -> float:
@@ -84,6 +87,7 @@ def save_results(device, config_file, reprojection, calibration_models, depth_me
         results[device]["MXID"] = [device]
     with open(config_file, 'w') as outfile:
         json.dump(results, outfile)
+    outfile.close()
     
     return overall_all, best_models, best_results, overall
     
@@ -307,6 +311,8 @@ def main(args):
                 results = json.load(infile)
             if device in results.keys():
                 calibration_models_dict = results[device]["binaries"]
+                for key in calibration_models_dict.keys():
+                    calibration_models_dict[key] = ["000000001"] + calibration_models_dict[key]
             else:
                 calibration_models = generate_binary_strings(n*2, args.c_model)
                 calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
@@ -336,7 +342,7 @@ def main(args):
             current_binaries[key] = binary
         dynamic = static
         calibration_models.append(binary)
-        print(f"ON {k}/{len(calibration_models_dict['left'])}")
+        print(f"\n \n <-------------ON {k}/{len(calibration_models_dict['left'])} ------------>\n \n")
         main = Main(dynamic)
         main.run()
         calib = dai.CalibrationHandler(main.calib_dest_path)
@@ -424,7 +430,7 @@ def main(args):
     ax2.grid()
 
     plt.tight_layout()
-    plt.show()
+    plt.close()
 
 
     print("Done with everything.")
@@ -439,6 +445,28 @@ def main(args):
     ax.set_xticks(x2)  # Set x-ticks to the positions of x2
     ax.set_xticklabels(calibration_models, rotation=45)
     ax.set_ylabel("Overall improvement[%]")
-    plt.show()
+    fig.savefig(save_folder + f'/iterative_{len(calibration_models_dict["left"])}.png')
+    return len(calibration_models_dict["left"])
 
-main(args)
+"/run/user/1000/gvfs/sftp:host=10.11.103.98/mnt/nas/calibration/mend_v1"
+if args.iterative is not None:
+    directory = args.iterative
+    if not args.full:
+        args.full = True
+    iteration = 1
+    for mxid in os.listdir(directory):
+        for date in os.listdir(directory + "/" + mxid):
+            if "calibration.json" in os.listdir(directory + "/" + mxid + "/" + date) and "depth_test" in os.listdir(directory + "/" + mxid + "/" + date):
+                path = directory + "/" + mxid + "/" + date + "/calibration.json"
+                print(f"Searching for device ... {args.device}, found {dai.CalibrationHandler(path).eepromToJson()['productName']}")
+                if dai.CalibrationHandler(path).eepromToJson()["productName"] == args.device:
+                    print(f"Found dataset starting {iteration} iteration.")
+                    args.session = directory + "/" + mxid + "/" + date
+                    num = main(args)
+                    iteration += 1
+                    args.full = False
+                    break
+        if num == 2:
+            break
+else:
+    main(args)
