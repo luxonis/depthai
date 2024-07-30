@@ -454,6 +454,7 @@ if args.iterative is not None:
     if not args.full:
         args.full = True
     iteration = 1
+    num = 0
     for mxid in os.listdir(directory):
         for date in os.listdir(directory + "/" + mxid):
             if "calibration.json" in os.listdir(directory + "/" + mxid + "/" + date) and "depth_test" in os.listdir(directory + "/" + mxid + "/" + date):
