@@ -37,7 +37,7 @@ class TriggerAction(SequenceNumSync):
         if self.trigger.condition(packet):
             trigger_time = datetime.now()
             if trigger_time - self.last_trigger_time > self.trigger.cooldown:
-                logging.debug(f'Triggered at {trigger_time}')
+                LOGGER.debug(f'Triggered at {trigger_time}')
                 self.last_trigger_time = trigger_time
                 self.action.activate()
 
