@@ -582,11 +582,21 @@ class Main:
                     cam_node.setBoardSocket(stringToCam[cam_id])
                     cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
                     cam_node.setFps(fps)
+                    
                     # Configure ToF node output FPS:
                     # - `ALL` for full FPS, both modulation frequencies, may flicker a little
                     # - `MIN` for half the FPS
                     tof_config = tof_node.initialConfig.get()
-                    tof_config.depthParams.freqModUsed = dai.RawToFConfig.DepthParams.TypeFMod.MIN
+                    cam_node.initialControl.setFrameSyncMode(dai.CameraControl.FrameSyncMode.INPUT)
+                    tof_config.enablePhaseShuffleTemporalFilter = False
+
+                    tof_config.enablePhaseShuffleTemporalFilter = True
+                    tof_config.enableFPPNCorrection = True
+                    tof_config.enableOpticalCorrection = True
+                    tof_config.enableWiggleCorrection = True
+                    tof_config.enableTemperatureCorrection = True
+                    tof_config.phaseUnwrappingLevel = 4
+                    tof_config.phaseUnwrapErrorThreshold = 1000
                     tof_node.initialConfig.set(tof_config)
 
                     xout.setStreamName(cam_info['name'])
