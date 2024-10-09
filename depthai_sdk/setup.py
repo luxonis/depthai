@@ -9,7 +9,7 @@ install_requires = [requirement for requirement in requirements if '--' not in r
 
 setup(
     name='depthai-sdk',
-    version='1.15.0',
+    version='1.15.1',
     description='This package provides an abstraction of the DepthAI API library.',
     long_description=io.open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",

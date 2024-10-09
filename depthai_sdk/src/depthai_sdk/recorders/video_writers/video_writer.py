@@ -60,7 +60,7 @@ class VideoWriter(BaseWriter):
         options = {}
         if self._lossless:
             self._fourcc = 'rawvideo'
-        elif frame.getType() == dai.ImgFrame.Type.RAW16:
+        elif frame.getType() == dai.ImgFrame.Type.RAW16: # Depth map
             self._fourcc = 'ffv1'
             self._format = 'gray16le'
         else:  # Mono/Color, encode
@@ -73,6 +73,11 @@ class VideoWriter(BaseWriter):
         self._stream.time_base = Fraction(1, 1000)
         self._stream.codec_context.width = frame.getWidth()
         self._stream.codec_context.height = frame.getHeight()
+
+        if self._fourcc == 'ffv1':
+            self._stream.width = frame.getWidth()
+            self._stream.height = frame.getHeight()
+            self._stream.pix_fmt = 'gray16le' # Required for depth recording to work correctly
 
     def write(self, img_frame: dai.ImgFrame):
         if self._file is None:
@@ -90,7 +95,6 @@ class VideoWriter(BaseWriter):
             video_format = 'gray16le'
         else:
             raise ValueError(f'Unsupported frame type: {img_frame.getType()}')
-
         video_frame = av.VideoFrame.from_ndarray(img_frame.getFrame(), format=video_format)
 
         ts = int((img_frame.getTimestampDevice() - self._start_ts).total_seconds() * 1e3)  # To milliseconds

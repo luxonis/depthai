@@ -1,3 +1,4 @@
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 depthai==2.19.1.0.dev+e88af9a9db3dc630a3011dd52d1f5700cf6bf9b8
 depthai-sdk==1.2.1
+numpy==1.26.4
