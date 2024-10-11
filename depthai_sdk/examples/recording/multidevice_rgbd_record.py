@@ -50,8 +50,7 @@ with contextlib.ExitStack() as stack:
         oak = stack.enter_context(OakCamera(device=info.getMxId()))
         color = oak.create_camera('CAM_A', resolution='1080p', encode='mjpeg', fps=FPS)
         stereo = oak.create_stereo(resolution='720p', fps=FPS)
-        stereo.config_stereo(align=color, subpixel=True)
-        stereo.config_stereo(subpixel=True, lr_check=True)
+        stereo.config_stereo(align=color, subpixel=True, lr_check=True)
         stereo.node.setOutputSize(640, 360)
 
         # On-device post processing for stereo depth
