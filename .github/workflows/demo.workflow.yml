@@ -39,7 +39,7 @@ jobs:
       run: .\launcher\windows\build.ps1
 
     - name: Upload Installer artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: installers
         path: launcher/windows/build/Output/
