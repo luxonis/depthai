@@ -8,33 +8,21 @@ import requests
 BLOBS_PATH = Path.home() / Path('.cache/blobs')
 
 
-BLOBS_PATH = Path.home() / Path('.cache/blobs')
-
 def getBlob(url: str) -> Path:
     """
-    Download the blob from the URL and cache it locally.
-    If the blob is already cached, return the cached file.
-    
-    @param url: URL to the blob
+    Download the blob path from the url. If blob is cached, serve that. TODO: compute hash, check server hash,
+    as there will likely be many `model.blob`s.
+
+    @param url: Url to the blob
     @return: Local path to the blob
     """
     fileName = Path(url).name
     filePath = BLOBS_PATH / fileName
-
-    print(filePath)
-    
-    # Check if the cached file exists and is a file
-    if filePath.is_file():
+    if filePath.exists():
         return filePath
-
-    # Ensure the blobs cache directory exists
     BLOBS_PATH.mkdir(parents=True, exist_ok=True)
 
-    # Download the blob
     r = requests.get(url)
-    if r.status_code != 200:
-        raise Exception(f"Failed to download {url}. Status code: {r.status_code}")
-
     with open(filePath, 'wb') as f:
         f.write(r.content)
         print('Downloaded', fileName)

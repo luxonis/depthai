@@ -240,7 +240,11 @@ class NNComponent(Component):
                 self._parse_config(model)
         else:  # SDK supported model
             models = getSupportedModels(printModels=False)
-            zoo_models = blobconverter.zoo_list()
+            
+            try:
+                zoo_models = blobconverter.zoo_list()
+            except Exception as e:
+                LOGGER.warning("No internet access, can't load models from depthai zoo.")
 
             if str(model) in models:
                 model = models[str(model)] / 'config.json'
