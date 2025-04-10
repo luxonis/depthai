@@ -14,7 +14,6 @@ on:
 
 jobs:
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ['self-hosted', 'win-signing-runner']
     steps:
     - name: Sign Windows Launcher
