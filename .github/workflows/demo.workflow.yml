@@ -60,7 +60,7 @@ jobs:
    # Sign Launcher
     - name: Sign Windows Launcher
       run: |
-         "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x86\signtool.exe" sign /f "C:\luxonis.cer" /csp "eToken Base Cryptographic Provider" /k "[{{${{SECTIGO_CERT_PASSWORD}})}}]=Sectigo_20241111150706" /tr http://timestamp.sectigo.com /td sha256 /fd sha256 /n "Luxonis Holding Corporation" "installers/DepthAI_setup.exe"
+         "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x86\signtool.exe" sign /f "C:\luxonis.cer" /csp "eToken Base Cryptographic Provider" /k "[{{${{ SECTIGO_CERT_PASSWORD }}}}]=Sectigo_20241111150706" /tr http://timestamp.sectigo.com /td sha256 /fd sha256 /n "Luxonis Holding Corporation" "installers/DepthAI_setup.exe"
     - name: Get current tag
       id: tag
       uses: battila7/get-version-action@v2
