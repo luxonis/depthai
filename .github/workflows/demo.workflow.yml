@@ -18,4 +18,4 @@ jobs:
     steps:
     - name: Sign Windows Launcher
       run: |
-         cmd.exe /c "C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x86\signtool.exe" sign /f "C:\luxonis.cer" /csp "eToken Base Cryptographic Provider" /k "[{{${{ secrets.SECTIGO_CERT_PASSWORD }}}}]=Sectigo_20241111150706" /tr http://timestamp.sectigo.com /td sha256 /fd sha256 /n "Luxonis Holding Corporation" "C:\Users\Administrator\Downloads\DepthAI-setup-v3.1.2.exe"
+         cmd.exe /c '"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x86\signtool.exe" sign /f "C:\luxonis.cer" /csp "eToken Base Cryptographic Provider" /k "[{{${{ secrets.SECTIGO_CERT_PASSWORD }}}}]=Sectigo_20241111150706" /tr http://timestamp.sectigo.com /td sha256 /fd sha256 /n "Luxonis Holding Corporation" "C:\Users\Administrator\Downloads\DepthAI-setup-v3.1.2.exe"'
