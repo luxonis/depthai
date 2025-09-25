@@ -1,12 +1,15 @@
-numpy==1.19.3
-# opencv-python==4.4.0.46
-requests==2.24.0
-argcomplete==1.12.1
-open3d==0.10.0; platform_machine != "armv7l" and python_version < "3.9"
-pyyaml==5.3.1
-# depthai==0.3.0.0
+argcomplete
+open3d
+pyyaml
 blkinfo
 paramiko
 pygame
+requests==2.26.0
+--extra-index-url https://www.piwheels.org/simple
+numpy>=1.21.4,<2.0.0 # For RPi Buster (last successful build) and macOS M1 (first build). But allow for higher versions, to support Python3.11 (not available in 1.21.4 yet)
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-depthai-data-local/wheels/
+pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" and platform_machine != "aarch64" and platform_machine != "arm64"
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.4.0.0+7232f40284fc60ac35595449390718294e25ea25
+depthai==2.24.0.0
+Qt.py
+scipy
