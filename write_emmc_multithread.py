@@ -108,7 +108,7 @@ for item in all_my_disks:
     disk_size = int(item["size"]) / divident
     print(disk_size)
     if disk_size < 33 and disk_size > 14: 
-        emmc_write_cmd = "sudo dd if=" + img_path + " of=/dev/" + item["name"] + " bs=4M conv=fsync status=progress"
+        emmc_write_cmd = "sudo dd if=" + img_path + " of=/dev/" + item["name"] + " bs=64M oflag=direct conv=fsync status=progress"
         print(emmc_write_cmd)
         # execute_write(emmc_write_cmd)
         emmc_write_procx = Process(target=execute_write, args=(emmc_write_cmd,))
