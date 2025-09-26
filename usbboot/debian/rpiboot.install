@@ -1,0 +1,14 @@
+rpiboot usr/bin
+msd/*.elf usr/share/rpiboot/msd/
+msd/*.bin usr/share/rpiboot/msd/
+recovery usr/share/rpiboot/
+eeprom-erase usr/share/rpiboot
+rpi-imager-embedded usr/share/rpiboot/
+mass-storage-gadget usr/share/rpiboot/
+secure-boot-recovery usr/share/rpiboot/
+secure-boot-msd usr/share/rpiboot/
+secure-boot-example usr/share/rpiboot/
+tools usr/share/rpiboot/
+debian/70-rpiboot.rules /lib/udev/rules.d
+recovery.bin usr/share/rpiboot/
+bootcode4.bin usr/share/rpiboot/
