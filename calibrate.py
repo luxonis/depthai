@@ -19,6 +19,8 @@ from cv2 import resize
 import depthai as dai
 import numpy as np
 import copy
+from packaging import version
+import sys
 
 import depthai_calibration.calibration_utils as calibUtils
 
@@ -353,6 +355,7 @@ class Main:
 
     def __init__(self):
         self.args = parse_args()
+        self.args.useDepthaiV3 = version.parse(dai.__version__) >= version.parse("3.0.0")
         self.traceLevel= self.args.traceLevel
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
@@ -464,7 +467,14 @@ class Main:
             self.mouseTrigger = True
 
     def startPipeline(self):
-        if not self.args.useDepthaiV3:
+        if version.parse(dai.__version__) < version.parse("3.0.0"):
+            if str(self.device.getDeviceInfo().platform) != "XLinkPlatform.X_LINK_MYRIAD_X":
+                sys.exit(
+                f"ERROR: RVC4 device detected, but DepthAI version {dai.__version__} is installed.\n"
+                "RVC4 is NOT supported on DepthAI 2.x.\n\n"
+                "Please upgrade to the latest DepthAI:\n"
+                "   pip install depthai --upgrade --force-reinstall\n"
+                )
             pipeline = self.create_pipeline()
             self.device.startPipeline(pipeline)
             self.camera_queue = {}
