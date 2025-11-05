@@ -19,6 +19,8 @@ from cv2 import resize
 import depthai as dai
 import numpy as np
 import copy
+from packaging import version
+import sys
 
 import depthai_calibration.calibration_utils as calibUtils
 
@@ -166,6 +168,8 @@ def parse_args():
                         help="Enable the display of polynoms.")
     parser.add_argument('-dbg', '--debugProcessingMode', default=False, action="store_true",
                         help="Enable processing of images without using the camera.")
+    parser.add_argument('-v3', '--useDepthaiV3', default=False, action="store_true",
+                        help="Use depthai v3.")
     options = parser.parse_args()
     # Set some extra defaults, `-brd` would override them
     if options.defaultBoard is not None:
@@ -351,6 +355,7 @@ class Main:
 
     def __init__(self):
         self.args = parse_args()
+        self.args.useDepthaiV3 = version.parse(dai.__version__) >= version.parse("3.0.0")
         self.traceLevel= self.args.traceLevel
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
@@ -462,14 +467,25 @@ class Main:
             self.mouseTrigger = True
 
     def startPipeline(self):
-        pipeline = self.create_pipeline()
-        self.device.startPipeline(pipeline)
-
-        self.camera_queue = {}
-        for config_cam in self.board_config['cameras']:
-            cam = self.board_config['cameras'][config_cam]
-            if cam["name"] not in self.args.disableCamera:
-                self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
+        if version.parse(dai.__version__) < version.parse("3.0.0"):
+            if str(self.device.getDeviceInfo().platform) != "XLinkPlatform.X_LINK_MYRIAD_X":
+                sys.exit(
+                f"ERROR: RVC4 device detected, but DepthAI version {dai.__version__} is installed.\n"
+                "RVC4 is NOT supported on DepthAI 2.x.\n\n"
+                "Please upgrade to the latest DepthAI:\n"
+                "   pip install depthai --upgrade --force-reinstall\n"
+                )
+            pipeline = self.create_pipeline()
+            self.device.startPipeline(pipeline)
+            self.camera_queue = {}
+            for config_cam in self.board_config['cameras']:
+                cam = self.board_config['cameras'][config_cam]
+                if cam["name"] not in self.args.disableCamera:
+                    self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
+        else:
+            pipeline = self.create_pipeline_v3()
+            pipeline.start()
+        self.pipeline = pipeline
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
@@ -579,6 +595,39 @@ class Main:
 
         return pipeline
 
+    def create_pipeline_v3(self):
+        pipeline = dai.Pipeline(self.device)
+        self.camera_queue = {}
+        fps = self.args.framerate
+        for cam_id in self.board_config['cameras']:
+            cam_info = self.board_config['cameras'][cam_id]
+            if cam_info["name"] not in self.args.disableCamera:
+                if cam_info['type'] == 'mono':
+                    cam_node = pipeline.create(dai.node.Camera).build(stringToCam[cam_id])
+                    self.camera_queue[cam_info['name']] = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12).createOutputQueue(blocking=False)
+                    sensorName = cam_info['sensorName']
+                    print(f'Sensor name for {cam_info["name"]} is {sensorName}')
+                else:
+                    cam_node = pipeline.create(dai.node.Camera).build(stringToCam[cam_id])
+                    self.camera_queue[cam_info['name']] = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12).createOutputQueue(blocking=False)
+                    if cam_info['sensorName'] == "OV9*82":
+                        cam_node.initialControl.setSharpness(0)
+                        cam_node.initialControl.setLumaDenoise(0)
+                        cam_node.initialControl.setChromaDenoise(4)
+
+                    if cam_info['hasAutofocus']:
+                        if self.args.rgbLensPosition:
+                            cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
+                        else:
+                            cam_node.initialControl.setManualFocusRaw(int(130 / 255))
+
+                        controlIn = pipeline.createXLinkIn()
+                        controlIn.setStreamName(cam_info['name'] + '-control')
+                        controlIn.out.link(cam_node.inputControl)
+                    sensorName = cam_info['sensorName']
+                    print(f'Sensor name for {cam_info["name"]} is {sensorName}')
+                cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
+        return pipeline
 
     def parse_frame(self, frame, stream_name):
         if not self.is_markers_found(frame):
@@ -724,7 +773,7 @@ class Main:
 
                 syncCollector.add_msg(key, frameMsg)
                 color_frame = None
-                if frameMsg.getType() in [dai.RawImgFrame.Type.RAW8, dai.RawImgFrame.Type.GRAY8] :
+                if not self.args.useDepthaiV3 and frameMsg.getType() in [dai.RawImgFrame.Type.RAW8, dai.RawImgFrame.Type.GRAY8] :
                     color_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_GRAY2BGR)
                 else:
                     color_frame = frameMsg.getCvFrame()
@@ -1082,7 +1131,10 @@ class Main:
                 print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
                 eeepromData.version = 7
                 print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
-                mx_serial_id = self.device.getDeviceInfo().getMxId()
+                if not self.args.useDepthaiV3:
+                    mx_serial_id = self.device.getDeviceInfo().getMxId()
+                else:
+                    mx_serial_id = self.device.getDeviceId()
                 date_time_string = datetime.now().strftime("_%m_%d_%y_%H_%M")
                 file_name = mx_serial_id + date_time_string
                 calib_dest_path = dest_path + '/' + file_name + '.json'
