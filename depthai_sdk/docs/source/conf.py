@@ -75,6 +75,12 @@ html_js_files = [
 html_context = {
     'meta_robots': '<meta name="robots" content="noindex, nofollow" />',
 }
+# Folder for extra files like robots.txt
+html_extra_path = ['_extra']
+
+html_meta = {
+    "robots": "noindex, nofollow"
+}
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
