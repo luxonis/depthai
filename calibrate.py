@@ -1,24 +1,38 @@
 #!/usr/bin/env python3
-import argparse
-import json
-from pydoc import render_doc
-import shutil
-import traceback
-from argparse import ArgumentParser
-from pathlib import Path
-import time
 from datetime import datetime, timedelta
-from collections import deque 
-from scipy.spatial.transform import Rotation
-import traceback
+from argparse import ArgumentParser
+from collections import deque
+from pathlib import Path
 import itertools
+import traceback
+import argparse
+
+import json
+import shutil
+
+import time
 import math
 
 import cv2
-from cv2 import resize
+import sys
+import os
+
+def check_opencv_version(REQUIRED_VERSION = "4.5.5"):
+    installed = cv2.__version__
+    if installed != REQUIRED_VERSION:
+        print(f"[ERROR] OpenCV version mismatch!")
+        print(f"Installed: {installed}")
+        print(f"Required : {REQUIRED_VERSION}")
+        print("Please re-run:")
+        print("    pip install -r calib_requirements.txt")
+        sys.exit(1)
+    else:
+        print(f"[OK] OpenCV version {installed} is correct.")
+
+check_opencv_version()
+
 import depthai as dai
 import numpy as np
-import copy
 from packaging import version
 import sys
 
@@ -168,7 +182,7 @@ def parse_args():
                         help="Enable the display of polynoms.")
     parser.add_argument('-dbg', '--debugProcessingMode', default=False, action="store_true",
                         help="Enable processing of images without using the camera.")
-    parser.add_argument('-v3', '--useDepthaiV3', default=False, action="store_true",
+    parser.add_argument('-v3', '--useDepthaiV3', default=True, action="store_true",
                         help="Use depthai v3.")
     options = parser.parse_args()
     # Set some extra defaults, `-brd` would override them
@@ -599,17 +613,21 @@ class Main:
         pipeline = dai.Pipeline(self.device)
         self.camera_queue = {}
         fps = self.args.framerate
+        sync = pipeline.create(dai.node.Sync)
+        sync.setSyncThreshold(timedelta(milliseconds=50))
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
             if cam_info["name"] not in self.args.disableCamera:
                 if cam_info['type'] == 'mono':
-                    cam_node = pipeline.create(dai.node.Camera).build(stringToCam[cam_id])
-                    self.camera_queue[cam_info['name']] = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12).createOutputQueue(blocking=False)
+                    cam_node = pipeline.create(dai.node.Camera, fps = fps).build(stringToCam[cam_id])
+                    cam_output = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12)
+                    cam_output.link(sync.inputs[cam_info["name"]])
+                    self.camera_queue[cam_info['name']] = cam_output
                     sensorName = cam_info['sensorName']
                     print(f'Sensor name for {cam_info["name"]} is {sensorName}')
                 else:
-                    cam_node = pipeline.create(dai.node.Camera).build(stringToCam[cam_id])
-                    self.camera_queue[cam_info['name']] = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12).createOutputQueue(blocking=False)
+                    cam_node = pipeline.create(dai.node.Camera, fps = fps).build(stringToCam[cam_id])
+                    self.camera_queue[cam_info['name']] = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12).link(sync.inputs[cam_info["name"]])
                     if cam_info['sensorName'] == "OV9*82":
                         cam_node.initialControl.setSharpness(0)
                         cam_node.initialControl.setLumaDenoise(0)
@@ -619,14 +637,13 @@ class Main:
                         if self.args.rgbLensPosition:
                             cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
                         else:
-                            cam_node.initialControl.setManualFocusRaw(int(130 / 255))
+                            cam_node.initialControl.setManualFocusRaw(int(135 / 255))
 
-                        controlIn = pipeline.createXLinkIn()
-                        controlIn.setStreamName(cam_info['name'] + '-control')
-                        controlIn.out.link(cam_node.inputControl)
+                    self.control_queue = cam_node.inputControl.createInputQueue()
                     sensorName = cam_info['sensorName']
                     print(f'Sensor name for {cam_info["name"]} is {sensorName}')
-                cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
+                #cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
+        self.sync_queue = sync.out.createOutputQueue()
         return pipeline
 
     def parse_frame(self, frame, stream_name):
@@ -766,8 +783,13 @@ class Main:
         sync_trys = 0
         while not finished:
             currImageList = {}
+            if self.args.useDepthaiV3:
+                msg_group = self.sync_queue.get()
             for key in self.camera_queue.keys():
-                frameMsg = self.camera_queue[key].get()
+                if self.args.useDepthaiV3:
+                    frameMsg = msg_group[key]
+                else:
+                    frameMsg = self.camera_queue[key].get()
 
                 #print(f'Timestamp of  {key} is {frameMsg.getTimestamp()}')
 
@@ -1143,7 +1165,7 @@ class Main:
                     Path(self.args.saveCalibPath).parent.mkdir(parents=True, exist_ok=True)
                     calibration_handler.eepromToJsonFile(self.args.saveCalibPath)
                 # try:
-                self.device.flashCalibration2(calibration_handler)
+                self.device.flashCalibration(calibration_handler)
                 is_write_succesful = True
                 # except RuntimeError as e:
                 #     is_write_succesful = False
