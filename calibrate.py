@@ -9,6 +9,7 @@ import argparse
 
 import json
 import shutil
+import tempfile
 
 import time
 import math
@@ -766,6 +767,16 @@ class Main:
         for attr in ["boardName", "boardRev"]:
             if getattr(data, attr): return False
         return True
+
+    def enforce_stereo_calibration_flags(self, calib_path: str):
+        with open(calib_path, "r", encoding="utf-8") as calib_file:
+            calib_json = json.load(calib_file)
+
+        calib_json["stereoUseSpecTranslation"] = False
+        calib_json["stereoEnableDistortionCorrection"] = True
+
+        with open(calib_path, "w", encoding="utf-8") as calib_file:
+            json.dump(calib_json, calib_file, indent=4)
     
     def capture_images_sync(self):
         finished = False
@@ -887,9 +898,18 @@ class Main:
                     imgFrame = imgFrame[height_offset:height_offset+resizeHeight, :]
 
                 height, width, _ = imgFrame.shape
-                height_offset = (resizeHeight - height)//2
-                width_offset = (resizeWidth - width)//2
-                subImage = np.pad(imgFrame, ((height_offset, height_offset), (width_offset, width_offset), (0, 0)), 'constant', constant_values=0)
+                pad_h = max(0, resizeHeight - height)
+                pad_w = max(0, resizeWidth - width)
+                pad_top = pad_h // 2
+                pad_bottom = pad_h - pad_top
+                pad_left = pad_w // 2
+                pad_right = pad_w - pad_left
+                subImage = np.pad(
+                    imgFrame,
+                    ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0)),
+                    'constant',
+                    constant_values=0,
+                )
                 if self.coverageImages[name] is not None:
                     if len(self.coverageImages[name].shape) != 3:
                         self.coverageImages[name] = cv2.cvtColor(self.coverageImages[name], cv2.COLOR_GRAY2RGB)
@@ -904,12 +924,16 @@ class Main:
                         height_offset = (height - resizeHeight)//2
                         imgFrame = imgFrame[height_offset:height_offset+resizeHeight, :]
                     height, width, _ = imgFrame.shape
-                    height_offset = (resizeHeight - height)//2
-                    width_offset = (resizeWidth - width)//2
-                    padding = ((height_offset, height_offset), (width_offset,width_offset), (0, 0))
+                    pad_h = max(0, resizeHeight - height)
+                    pad_w = max(0, resizeWidth - width)
+                    pad_top = pad_h // 2
+                    pad_bottom = pad_h - pad_top
+                    pad_left = pad_w // 2
+                    pad_right = pad_w - pad_left
+                    padding = ((pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
                     subCoverageImage = np.pad(imgFrame, padding, 'constant', constant_values=0)
                     print_text = f"Camera: {name}, picture {self.images_captured}"
-                    cv2.putText(subCoverageImage, print_text, (15, 15+height_offset), cv2.FONT_HERSHEY_SIMPLEX, 2*imgFrame.shape[0]/1750, (0, 0, 0), 2)                    
+                    cv2.putText(subCoverageImage, print_text, (15, 15 + pad_top), cv2.FONT_HERSHEY_SIMPLEX, 2*imgFrame.shape[0]/1750, (0, 0, 0), 2)                    
                     if combinedCoverageImage is None:
                         combinedCoverageImage = subCoverageImage
                     else:
@@ -1153,52 +1177,65 @@ class Main:
                 print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
                 eeepromData.version = 7
                 print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
-                if not self.args.useDepthaiV3:
-                    mx_serial_id = self.device.getDeviceInfo().getMxId()
+
+                if not self.args.debugProcessingMode:
+                    if not self.args.useDepthaiV3:
+                        mx_serial_id = self.device.getDeviceInfo().getMxId()
+                    else:
+                        mx_serial_id = self.device.getDeviceId()
                 else:
-                    mx_serial_id = self.device.getDeviceId()
+                    mx_serial_id = Path(self.dataset_path).name
+
                 date_time_string = datetime.now().strftime("_%m_%d_%y_%H_%M")
                 file_name = mx_serial_id + date_time_string
                 calib_dest_path = dest_path + '/' + file_name + '.json'
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_calib_file:
+                    temp_calib_path = temp_calib_file.name
+
+                calibration_handler.eepromToJsonFile(temp_calib_path)
+                self.enforce_stereo_calibration_flags(temp_calib_path)
+                calibration_handler = dai.CalibrationHandler(temp_calib_path)
                 calibration_handler.eepromToJsonFile(calib_dest_path)
+                print(f"Calibration JSON saved to: {calib_dest_path}")
                 if self.args.saveCalibPath:
                     Path(self.args.saveCalibPath).parent.mkdir(parents=True, exist_ok=True)
                     calibration_handler.eepromToJsonFile(self.args.saveCalibPath)
-                # try:
-                self.device.flashCalibration(calibration_handler)
-                is_write_succesful = True
-                # except RuntimeError as e:
-                #     is_write_succesful = False
-                #     print(e)
-                #     print("Writing in except...")
-                #     is_write_succesful = self.device.flashCalibration2(calibration_handler)
+                    print(f"Calibration JSON saved to: {self.args.saveCalibPath}")
 
-                if self.args.factoryCalibration:
-                    try:
-                        self.device.flashFactoryCalibration(calibration_handler)
-                        is_write_factory_sucessful = True
-                    except RuntimeError:
-                        print("flashFactoryCalibration Failed...")
-                        is_write_factory_sucessful = False
+                if not self.args.debugProcessingMode:
+                    print('Flashing Calibration data into ')
+                    # try:
+                    self.device.flashCalibration(calibration_handler)
+                    is_write_succesful = True
+                    # except RuntimeError as e:
+                    #     is_write_succesful = False
+                    #     print(e)
+                    #     print("Writing in except...")
+                    #     is_write_succesful = self.device.flashCalibration2(calibration_handler)
 
-                if is_write_succesful:
-                    if not self.args.debugProcessingMode:
+                    if self.args.factoryCalibration:
+                        try:
+                            self.device.flashFactoryCalibration(calibration_handler)
+                            is_write_factory_sucessful = True
+                        except RuntimeError:
+                            print("flashFactoryCalibration Failed...")
+                            is_write_factory_sucessful = False
+
+                    if is_write_succesful:
                         self.device.close()
-                    text = "EEPROM written succesfully"
-                    resImage = create_blank(900, 512, rgb_color=green)
-                    cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
-                    cv2.imshow("Result Image", resImage)
-                    cv2.waitKey(0)
-                    
-                else:
-                    if not self.args.debugProcessingMode:
+                        text = "EEPROM written succesfully"
+                        resImage = create_blank(900, 512, rgb_color=green)
+                        cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
+                        cv2.imshow("Result Image", resImage)
+                        cv2.waitKey(0)
+                    else:
                         self.device.close()
-                    text = "EEPROM write Failed!!"
-                    resImage = create_blank(900, 512, rgb_color=red)
-                    cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
-                    cv2.imshow("Result Image", resImage)
-                    cv2.waitKey(0)
-                    # return (False, "EEPROM write Failed!!")
+                        text = "EEPROM write Failed!!"
+                        resImage = create_blank(900, 512, rgb_color=red)
+                        cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
+                        cv2.imshow("Result Image", resImage)
+                        cv2.waitKey(0)
+                        # return (False, "EEPROM write Failed!!")
             
             else:
                 if not self.args.debugProcessingMode:
