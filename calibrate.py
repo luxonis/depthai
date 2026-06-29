@@ -618,15 +618,20 @@ class Main:
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
             if cam_info["name"] not in self.args.disableCamera:
+                sensor_type = dai.CameraSensorType.MONO if cam_info['type'] == 'mono' else dai.CameraSensorType.COLOR
                 if cam_info['type'] == 'mono':
-                    cam_node = pipeline.create(dai.node.Camera, fps = fps).build(stringToCam[cam_id])
+                    cam_node = pipeline.create(dai.node.Camera, fps = fps)
+                    cam_node.setSensorType(sensor_type)
+                    cam_node = cam_node.build(stringToCam[cam_id])
                     cam_output = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12)
                     cam_output.link(sync.inputs[cam_info["name"]])
                     self.camera_queue[cam_info['name']] = cam_output
                     sensorName = cam_info['sensorName']
                     print(f'Sensor name for {cam_info["name"]} is {sensorName}')
                 else:
-                    cam_node = pipeline.create(dai.node.Camera, fps = fps).build(stringToCam[cam_id])
+                    cam_node = pipeline.create(dai.node.Camera, fps = fps)
+                    cam_node.setSensorType(sensor_type)
+                    cam_node = cam_node.build(stringToCam[cam_id])
                     self.camera_queue[cam_info['name']] = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12).link(sync.inputs[cam_info["name"]])
                     if cam_info['sensorName'] == "OV9*82":
                         cam_node.initialControl.setSharpness(0)
