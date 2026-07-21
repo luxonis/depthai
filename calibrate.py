@@ -1045,6 +1045,8 @@ class Main:
                                         self.args.squaresY,
                                         self.args.cameraMode,
                                         self.args.rectifiedDisp) # Turn off enable disp rectify
+            if status == -1:
+                raise RuntimeError(f"Calibration failed: {result_config}")
 
             if self.args.noInitCalibration or self.args.debugProcessingMode:
                 calibration_handler = dai.CalibrationHandler()
@@ -1150,6 +1152,10 @@ class Main:
                 # print(calib_dest_path)
 
                 eeepromData = calibration_handler.getEepromData()
+                eeepromData.stereoUseSpecTranslation = False
+                eeepromData.stereoEnableDistortionCorrection = True
+
+                calibration_handler = dai.CalibrationHandler(eeepromData)
                 print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
                 eeepromData.version = 7
                 print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
