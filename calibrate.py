@@ -593,15 +593,18 @@ class Main:
                         cam_node.initialControl.setLumaDenoise(0)
                         cam_node.initialControl.setChromaDenoise(4)
 
-                    if cam_info['hasAutofocus']:
-                        if self.args.rgbLensPosition:
-                            cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
-                        else:
-                            cam_node.initialControl.setManualFocus(135)
+                if cam_info['hasAutofocus']:
+                    cam_node.initialControl.setAutoFocusMode(
+                        dai.CameraControl.AutoFocusMode.OFF
+                    )
+                    if self.args.rgbLensPosition:
+                        cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
+                    else:
+                        cam_node.initialControl.setManualFocus(135)
 
-                        controlIn = pipeline.createXLinkIn()
-                        controlIn.setStreamName(cam_info['name'] + '-control')
-                        controlIn.out.link(cam_node.inputControl)
+                    controlIn = pipeline.createXLinkIn()
+                    controlIn.setStreamName(cam_info['name'] + '-control')
+                    controlIn.out.link(cam_node.inputControl)
 
                 cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
                 xout.input.setBlocking(False)
@@ -633,16 +636,20 @@ class Main:
                         cam_node.initialControl.setLumaDenoise(0)
                         cam_node.initialControl.setChromaDenoise(4)
 
-                    if cam_info['hasAutofocus']:
-                        if self.args.rgbLensPosition:
-                            cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
-                        else:
-                            cam_node.initialControl.setManualFocusRaw(int(135 / 255))
+            sensorName = cam_info['sensorName']
+            print(f'Sensor name for {cam_info["name"]} is {sensorName}')
 
-                    self.control_queue = cam_node.inputControl.createInputQueue()
-                    sensorName = cam_info['sensorName']
-                    print(f'Sensor name for {cam_info["name"]} is {sensorName}')
-                #cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
+            if cam_info['hasAutofocus']:
+                    cam_node.initialControl.setAutoFocusMode(
+                        dai.CameraControl.AutoFocusMode.OFF
+                    )
+                    if self.args.rgbLensPosition:
+                        cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
+                    else:
+                        cam_node.initialControl.setManualFocusRaw(int(135 / 255))
+
+            self.control_queue = cam_node.inputControl.createInputQueue()
+            #cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
         self.sync_queue = sync.out.createOutputQueue()
         return pipeline
 
