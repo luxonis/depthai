@@ -640,9 +640,9 @@ class Main:
 
                     if cam_info['hasAutofocus']:
                         if self.args.rgbLensPosition:
-                            cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
+                            cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[cam_info["name"]))
                         else:
-                            cam_node.initialControl.setManualFocusRaw(int(135 / 255))
+                            cam_node.initialControl.setManualFocusRaw(135 / 255)
 
                     self.control_queue = cam_node.inputControl.createInputQueue()
                     sensorName = cam_info['sensorName']
