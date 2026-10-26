@@ -615,46 +615,38 @@ class Main:
     def create_pipeline_v3(self):
         pipeline = dai.Pipeline(self.device)
         self.camera_queue = {}
-        fps = self.args.frameratecam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
+        fps = self.args.framerate
         sync = pipeline.create(dai.node.Sync)
         sync.setSyncThreshold(timedelta(milliseconds=50))
-        for cam_id in self.board_config['cameras']:
-            cam_info = self.board_config['cameras'][cam_id]
-            if cam_info["name"] not in self.args.disableCamera:
-                sensor_type = dai.CameraSensorType.MONO if cam_info['type'] == 'mono' else dai.CameraSensorType.COLOR
-                if cam_info['type'] == 'mono':
-                    cam_node = pipeline.create(dai.node.Camera, fps = fps)
-                    cam_node.setSensorType(sensor_type)
-                    cam_node = cam_node.build(stringToCam[cam_id])
-                    cam_output = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12)
-                    cam_output.link(sync.inputs[cam_info["name"]])
-                    self.camera_queue[cam_info['name']] = cam_output
-                    sensorName = cam_info['sensorName']
-                    print(f'Sensor name for {cam_info["name"]} is {sensorName}')
-                else:
-                    cam_node = pipeline.create(dai.node.Camera, fps = fps)
-                    cam_node.setSensorType(sensor_type)
-                    cam_node = cam_node.build(stringToCam[cam_id])
-                    self.camera_queue[cam_info['name']] = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12).link(sync.inputs[cam_info["name"]])
-                    if cam_info['sensorName'] == "OV9*82":
-                        cam_node.initialControl.setSharpness(0)
-                        cam_node.initialControl.setLumaDenoise(0)
-                        cam_node.initialControl.setChromaDenoise(4)
+        for cam_id, cam_info in self.board_config['cameras'].items():
+            if cam_info["name"] in self.args.disableCamera:
+                continue
+
+            sensor_type = dai.CameraSensorType.MONO if cam_info['type'] == 'mono' else dai.CameraSensorType.COLOR
+            cam_node = pipeline.create(dai.node.Camera)
+            cam_node.setSensorType(sensor_type)
+            cam_node = cam_node.build(stringToCam[cam_id], sensorFps=fps)
+            cam_output = cam_node.requestFullResolutionOutput(type=dai.ImgFrame.Type.NV12, fps=fps)
+            cam_output.link(sync.inputs[cam_info["name"]])
+            self.camera_queue[cam_info['name']] = cam_output
 
             sensorName = cam_info['sensorName']
             print(f'Sensor name for {cam_info["name"]} is {sensorName}')
+            if cam_info['type'] != 'mono' and sensorName == "OV9*82":
+                cam_node.initialControl.setSharpness(0)
+                cam_node.initialControl.setLumaDenoise(0)
+                cam_node.initialControl.setChromaDenoise(4)
 
             if cam_info['hasAutofocus']:
-                    cam_node.initialControl.setAutoFocusMode(
-                        dai.CameraControl.AutoFocusMode.OFF
-                    )
-                    if self.args.rgbLensPosition:
-                        cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[cam_info["name"]]))
-                    else:
-                        cam_node.initialControl.setManualFocusRaw(135 / 255)
+                cam_node.initialControl.setAutoFocusMode(
+                    dai.CameraControl.AutoFocusMode.OFF
+                )
+                if self.args.rgbLensPosition:
+                    cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[cam_info["name"]]))
+                else:
+                    cam_node.initialControl.setManualFocusRaw(135 / 255)
 
             self.control_queue = cam_node.inputControl.createInputQueue()
-            #cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
         self.sync_queue = sync.out.createOutputQueue()
         return pipeline
 
@@ -983,8 +975,11 @@ class Main:
                     print("Images were unable to sync, threshold to high. Device closing with exception.")
                     raise SystemExit(1)
                 if syncedMsgs == False or syncedMsgs == None:
-                    for key in self.camera_queue.keys():
-                        self.camera_queue[key].getAll()
+                    if self.args.useDepthaiV3:
+                        self.sync_queue.getAll()
+                    else:
+                        for queue in self.camera_queue.values():
+                            queue.getAll()
                     sync_trys += 1
                     continue
 
